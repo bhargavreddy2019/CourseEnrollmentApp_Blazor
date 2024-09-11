@@ -1,0 +1,28 @@
+﻿@page "/courses"
+@using CourseEnrollment.Server.Models
+@inject HttpClient Http
+
+<h3>Available Courses</h3>
+
+@if (courses == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <ul>
+        @foreach (var course in courses)
+        {
+            <li>@course.Title</li>
+        }
+    </ul>
+}
+
+@code {
+    private List<Course> courses;
+
+    protected override async Task OnInitializedAsync()
+    {
+        courses = await Http.GetFromJsonAsync<List<Course>>("api/courses");
+    }
+}

@@ -1,0 +1,30 @@
+﻿@page "/my-courses"
+@using CourseEnrollment.Server.Models
+@inject HttpClient Http
+
+<h3>My Courses</h3>
+
+@if (enrollments == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <ul>
+        @foreach (var enrollment in enrollments)
+        {
+            <li>@enrollment.Course.Title</li>
+        }
+    </ul>
+}
+
+@code {
+    private List<Enrollment> enrollments;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Assuming you have the student ID from authentication
+        var studentId = 1;
+        enrollments = await Http.GetFromJsonAsync<List<Enrollment>>($"api/students/{studentId}/enrollments");
+    }
+}

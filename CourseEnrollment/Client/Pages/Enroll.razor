@@ -1,0 +1,148 @@
+﻿@page "/enroll"
+@using System.Net.Http.Json
+@using System.Text.Json
+@using CourseEnrollment.Server.Models
+@using CourseEnrollment.Shared
+@inject HttpClient Http
+
+<h3>Enroll in Course</h3>
+
+@if (courses == null)
+{
+    <p><em>Loading courses...</em></p>
+}
+else
+{
+    <select @bind="selectedCourseId">
+        <option value="">Select a course</option>
+        @foreach (var course in courses)
+        {
+            <option value="@course.Id">@course.Title</option>
+        }
+    </select>
+    <button @onclick="EnrollInCourse">Enroll</button>
+}
+
+@if (errorMessage != null)
+{
+    <p style="color: red;"><em>@errorMessage</em></p>
+}
+
+@if (enrollments == null)
+{
+    <p><em>Loading enrollments...</em></p>
+}
+else if (!enrollments.Any())
+{
+    <p><em>No courses enrolled.</em></p>
+}
+else
+{
+    <h1>Enrolled Courses</h1>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Course Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var enrollment in enrollments)
+            {
+                <tr>
+                    <td>@enrollment.Course.Title</td>
+                    <td>
+                        <button @onclick="() => UnenrollFromCourse(enrollment.CourseId)">Unenroll</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Course> courses;
+    private List<Enrollment> enrollments;
+    private int selectedCourseId;
+    private string errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourses();
+        await LoadEnrollments();
+    }
+
+    private async Task LoadCourses()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/courses");
+            courses = await Http.GetFromJsonAsync<List<Course>>("api/courses");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Following error while LoadCourses {ex.Message}";
+        }
+    }
+
+    private async Task LoadEnrollments()
+    {
+        try
+        {
+            var studentId = 1;
+            enrollments = await Http.GetFromJsonAsync<List<Enrollment>>($"api/enrollments/{studentId}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Following error while LoadEnrollments {ex.Message}";
+        }
+    }
+
+    private async Task EnrollInCourse()
+    {
+        try
+        {
+            if (selectedCourseId == 0)
+            {
+                errorMessage = "select course!!";
+                return;
+            }
+            var studentId = 1;
+            var enrollment = new Enrollment { StudentId = studentId, CourseId = selectedCourseId };
+            var response = await Http.PostAsJsonAsync("api/enrollments", enrollment);
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadEnrollments();
+                errorMessage = null;
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                errorMessage = "Already enrolled in this course";
+            else
+                errorMessage = "error while processing request , please try again after sometime.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Following error while EnrollInCourse {ex.Message}";
+        }
+    }
+
+    private async Task UnenrollFromCourse(int courseId)
+    {
+        try
+        {
+            var studentId = 1; // Replace with actual logic to get the student ID
+            var response = await Http.DeleteAsync($"api/enrollments/{studentId}/{courseId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                await LoadEnrollments();
+                errorMessage = "Succesfully unenrolled!!";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Following error while UnenrollFromCourse {ex.Message}";
+        }
+    }
+}
